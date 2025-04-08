@@ -1,0 +1,10 @@
+[2025-04-03 14:14:46] 
+🤖 Starting networking bot at 2025-04-03 14:14
+[2025-04-03 14:14:46] Initializing platforms...
+[2025-04-03 14:14:46] ERROR: ❌ Failed to initialize reddit: Missing credentials passed to snoowrap constructor. You must pass an object containing either (a) userAgent, clientId, clientSecret, and refreshToken properties, (b) userAgent and accessToken properties, or (c) userAgent, clientId, clientSecret, username, and password properties. For information, please read the docs at https://not-an-aardvark.github.io/snoowrap/.
+[2025-04-03 14:14:47] ERROR: ❌ Failed to initialize bluesky: Input must have the property "identifier"
+[2025-04-03 14:14:47] ERROR: Nostr private key not found in environment variables
+[2025-04-03 14:14:47] ERROR: ❌ Failed to initialize nostr: Nostr private key is required. Please set NOSTR_PRIVATE_KEY in your .env file
+[2025-04-03 14:14:47] ⏭️ Skipping disabled platform: x
+[2025-04-03 14:14:47] 
+⏱️ Waiting 1 hour before next run...

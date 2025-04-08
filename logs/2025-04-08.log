@@ -1,0 +1,105 @@
+[2025-04-08 18:06:03] 
+🤖 Starting networking bot at 2025-04-08 18:06
+[2025-04-08 18:06:03] Initializing services...
+[2025-04-08 18:06:05] INFO: Loaded 25 proxies (0 blacklisted)
+[2025-04-08 18:06:05] ✅ Proxy manager initialized
+[2025-04-08 18:06:05] Initializing platforms...
+[2025-04-08 18:06:05] INFO: Using proxy: 104.222.161.205:6337
+[2025-04-08 18:06:05] Using proxy: 104.222.161.205:6337
+[2025-04-08 18:06:05] ERROR: Failed to initialize TikTok: Could not find Chrome (ver. 134.0.6998.165). This can occur if either
+ 1. you did not perform an installation before running the script (e.g. `npx puppeteer browsers install chrome`) or
+ 2. your cache path is incorrectly configured (which is: /Users/mrp/.cache/puppeteer).
+For (2), check out our guide on configuring puppeteer at https://pptr.dev/guides/configuration.
+[2025-04-08 18:06:05] ERROR: ❌ Failed to initialize tiktok: Could not find Chrome (ver. 134.0.6998.165). This can occur if either
+ 1. you did not perform an installation before running the script (e.g. `npx puppeteer browsers install chrome`) or
+ 2. your cache path is incorrectly configured (which is: /Users/mrp/.cache/puppeteer).
+For (2), check out our guide on configuring puppeteer at https://pptr.dev/guides/configuration.
+[2025-04-08 18:06:05] INFO: Using proxy: 154.29.65.67:6175
+[2025-04-08 18:06:05] Using proxy: 154.29.65.67:6175
+[2025-04-08 18:06:05] ERROR: Failed to initialize X.com: Could not find Chrome (ver. 134.0.6998.165). This can occur if either
+ 1. you did not perform an installation before running the script (e.g. `npx puppeteer browsers install chrome`) or
+ 2. your cache path is incorrectly configured (which is: /Users/mrp/.cache/puppeteer).
+For (2), check out our guide on configuring puppeteer at https://pptr.dev/guides/configuration.
+[2025-04-08 18:06:05] ERROR: ❌ Failed to initialize x: Could not find Chrome (ver. 134.0.6998.165). This can occur if either
+ 1. you did not perform an installation before running the script (e.g. `npx puppeteer browsers install chrome`) or
+ 2. your cache path is incorrectly configured (which is: /Users/mrp/.cache/puppeteer).
+For (2), check out our guide on configuring puppeteer at https://pptr.dev/guides/configuration.
+[2025-04-08 18:06:05] 
+⏱️ Next run scheduled for 7:20:51 PM
+[2025-04-08 18:06:05] INFO: Proxy validation successful: 64.137.90.91:5711
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 185.236.95.23:5984
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 43.245.119.184:5958
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 208.70.11.91:6172
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 171.22.249.76:5656
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 31.59.18.17:6598
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 104.222.161.205:6337
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 103.47.52.152:8194
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 168.199.186.64:6487
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 145.223.40.25:5595
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 103.251.223.178:6157
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 31.59.33.147:6723
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 207.244.217.37:6584
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 45.43.184.55:5729
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 64.137.14.221:5887
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 176.113.67.46:6009
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 142.111.44.158:5870
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 23.129.252.66:6334
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 67.227.42.19:5996
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 173.245.88.115:5418
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 154.29.65.67:6175
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 136.0.103.230:5931
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 43.229.11.130:5768
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 104.239.77.111:5834
+[2025-04-08 18:06:06] INFO: Proxy validation successful: 173.214.177.232:5923
+[2025-04-08 18:06:20] 
+Shutting down...
+[2025-04-08 18:06:20] Cleaning up resources...
+[2025-04-08 18:06:20] ✅ tiktok cleaned up
+[2025-04-08 18:06:20] ✅ x cleaned up
+[2025-04-08 18:08:07] 
+🤖 Starting networking bot at 2025-04-08 18:08
+[2025-04-08 18:08:07] Initializing services...
+[2025-04-08 18:08:08] INFO: Loaded 25 proxies (0 blacklisted)
+[2025-04-08 18:08:08] ✅ Proxy manager initialized
+[2025-04-08 18:08:08] Initializing platforms...
+[2025-04-08 18:08:08] INFO: Using proxy: 104.222.161.205:6337
+[2025-04-08 18:08:08] Using proxy: 104.222.161.205:6337
+[2025-04-08 18:08:08] INFO: Proxy validation successful: 104.222.161.205:6337
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 31.59.18.17:6598
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 104.239.77.111:5834
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 136.0.103.230:5931
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 154.29.65.67:6175
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 207.244.217.37:6584
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 171.22.249.76:5656
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 64.137.90.91:5711
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 142.111.44.158:5870
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 145.223.40.25:5595
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 43.229.11.130:5768
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 67.227.42.19:5996
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 185.236.95.23:5984
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 45.43.184.55:5729
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 168.199.186.64:6487
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 103.47.52.152:8194
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 103.251.223.178:6157
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 208.70.11.91:6172
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 23.129.252.66:6334
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 173.214.177.232:5923
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 31.59.33.147:6723
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 43.245.119.184:5958
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 64.137.14.221:5887
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 176.113.67.46:6009
+[2025-04-08 18:08:09] INFO: Proxy validation successful: 173.245.88.115:5418
+[2025-04-08 18:08:44] ERROR: Failed to initialize TikTok: net::ERR_TIMED_OUT at https://www.tiktok.com/
+[2025-04-08 18:08:44] ERROR: ❌ Failed to initialize tiktok: net::ERR_TIMED_OUT at https://www.tiktok.com/
+[2025-04-08 18:08:44] INFO: Using proxy: 154.29.65.67:6175
+[2025-04-08 18:08:44] Using proxy: 154.29.65.67:6175
+[2025-04-08 18:09:06] X.com initialized successfully
+[2025-04-08 18:09:06] ✅ x initialized
+[2025-04-08 18:09:06] 
+🔄 Running x bot...
+[2025-04-08 18:09:06] Searching X.com for term: networking
+[2025-04-08 18:09:06] INFO: Waiting 130 seconds before next action...
+[2025-04-08 18:11:40] WARNING: No user results found for "networking"
+[2025-04-08 18:11:40] INFO: x_search count: 1/25 daily
+[2025-04-08 18:11:48] Searching X.com for term: founder
+[2025-04-08 18:11:48] INFO: Waiting 98 seconds before next action...

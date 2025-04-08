@@ -1,0 +1,24 @@
+{
+  "name": "reddit-networking-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A Reddit bot to PM people interested in tech-founder networking groups",
+  "main": "src/networking-bot.mjs",
+  "scripts": {
+    "start": "node src/networking-bot.mjs"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.14.10",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "dayjs": "^1.11.9",
+    "dotenv": "^16.4.7",
+    "nostr-tools": "^2.11.0",
+    "puppeteer": "^24.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "snoowrap": "^1.23.0",
+    "twitter-api-v2": "^1.22.0",
+    "ws": "^8.18.1"
+  }
+}

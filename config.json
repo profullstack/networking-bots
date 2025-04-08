@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "tiktok": {
+      "enabled": true,
+      "message": "Hey! I noticed your content about networking — I help run a tech founder networking group, would you like to join?"
+    },
+    "x": {
+      "enabled": true,
+      "message": "Hey! I noticed your tweets about networking — I help run a tech founder networking group, would you like to join?"
+    }
+  },
+  "searchTerms": {
+    "tiktok": ["networking", "founder", "startup", "entrepreneur", "tech business", "business connections"],
+    "x": ["networking", "founder", "startup", "entrepreneur", "tech business", "business connections"]
+  }
+}
