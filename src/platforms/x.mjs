@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { setTimeout as wait } from 'timers/promises';
 import dayjs from 'dayjs';
+import { TwitterApi } from 'twitter-api-v2';
 import { logger } from '../utils/logger.mjs';
 import { humanBehavior } from '../services/human-behavior.mjs';
 import { rateLimiter } from '../services/rate-limiter.mjs';
@@ -9,12 +10,55 @@ import { proxyManager } from '../services/proxy-manager.mjs';
 
 let browser;
 let page;
+let twitterClient;
+
+/**
+ * Initialize Twitter API client
+ * @returns {Promise<TwitterApi|null>} Twitter API client or null if initialization fails
+ */
+async function initTwitterAPI() {
+  const apiKey = process.env.X_API_KEY;
+  const apiSecret = process.env.X_API_SECRET;
+  const accessToken = process.env.X_ACCESS_TOKEN;
+  const accessSecret = process.env.X_ACCESS_SECRET;
+  
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
+    logger.warn('X (Twitter) API credentials not found in environment variables');
+    return null;
+  }
+  
+  try {
+    // Create Twitter API client with OAuth 1.0a authentication
+    const client = new TwitterApi({
+      appKey: apiKey,
+      appSecret: apiSecret,
+      accessToken: accessToken,
+      accessSecret: accessSecret
+    });
+    
+    // Verify credentials by making a test API call
+    const verifyResponse = await client.v2.me();
+    if (verifyResponse && verifyResponse.data) {
+      logger.log(`X (Twitter) API initialized successfully. Connected as: ${verifyResponse.data.username}`);
+      return client;
+    } else {
+      logger.warn('X (Twitter) API credentials verification failed');
+      return null;
+    }
+  } catch (error) {
+    logger.error(`Error initializing X (Twitter) API: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Initialize X platform
  */
 export async function initialize() {
   try {
+    // Initialize Twitter API client
+    twitterClient = await initTwitterAPI();
+    
     // Apply stealth plugin to avoid detection
     puppeteer.use(StealthPlugin());
     
@@ -207,10 +251,6 @@ export async function findPotentialUsers(searchTerms) {
  * @returns {Promise<boolean>} - Success status
  */
 export async function messageUser(username, message) {
-  if (!browser || !page) {
-    throw new Error('X.com browser not initialized');
-  }
-  
   logger.log(`[${dayjs().format('HH:mm')}] Attempting to message X.com user: ${username}`);
   
   try {
@@ -219,6 +259,61 @@ export async function messageUser(username, message) {
     if (!canProceed) {
       logger.warn('Rate limit reached for X.com messaging');
       return false;
+    }
+    
+    // Try using the Twitter API first if available
+    if (twitterClient) {
+      try {
+        logger.log(`Attempting to message ${username} using Twitter API`);
+        
+        // Step 1: Find the user's ID from their username
+        const userLookup = await twitterClient.v2.userByUsername(username);
+        if (!userLookup.data) {
+          logger.warn(`Could not find user ${username} via Twitter API`);
+        } else {
+          const userId = userLookup.data.id;
+          logger.log(`Found user ${username} with ID: ${userId}`);
+          
+          // Step 2: Check if we can send a direct message to this user
+          // This requires checking if they follow us or have DMs open
+          const relationship = await twitterClient.v2.friendship(
+            await twitterClient.v2.me().then(me => me.data.id),
+            userId
+          );
+          
+          if (relationship.data.following) {
+            logger.log(`User ${username} is following us, can send DM`);
+            
+            // Step 3: Send the direct message
+            const dmResponse = await twitterClient.v1.sendDm({
+              recipient_id: userId,
+              text: message
+            });
+            
+            if (dmResponse && dmResponse.event) {
+              logger.log(`Successfully sent DM to ${username} via Twitter API`);
+              
+              // Increment message count
+              await rateLimiter.incrementActionCount('x_message');
+              
+              return true;
+            }
+          } else {
+            logger.log(`User ${username} is not following us, cannot send DM via API`);
+            // Try following them first
+            await twitterClient.v2.follow(await twitterClient.v2.me().then(me => me.data.id), userId);
+            logger.log(`Followed user ${username}, they may follow back later`);
+          }
+        }
+      } catch (apiError) {
+        logger.error(`Error using Twitter API to message ${username}: ${apiError.message}`);
+        logger.log('Falling back to browser-based approach');
+      }
+    }
+    
+    // Fall back to browser-based approach if API fails or isn't available
+    if (!browser || !page) {
+      throw new Error('X.com browser not initialized');
     }
     
     // Wait before action to avoid detection

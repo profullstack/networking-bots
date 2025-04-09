@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { setTimeout as wait } from 'timers/promises';
 import dayjs from 'dayjs';
+import axios from 'axios';
 import { logger } from '../utils/logger.mjs';
 import { humanBehavior } from '../services/human-behavior.mjs';
 import { rateLimiter } from '../services/rate-limiter.mjs';
@@ -9,12 +10,83 @@ import { proxyManager } from '../services/proxy-manager.mjs';
 
 let browser;
 let page;
+let tiktokApiToken;
+
+// Initialize TikTok API client
+async function initTikTokAPI() {
+  const clientId = process.env.TIKTOK_CLIENT_ID;
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    logger.warn('TikTok API credentials not found in environment variables');
+    return null;
+  }
+  
+  try {
+    logger.log('TikTok API credentials found - initializing API client');
+    
+    // Step 1: Get an access token using client credentials
+    const tokenResponse = await axios.post(
+      'https://open-api.tiktok.com/oauth/access_token/',
+      null,
+      {
+        params: {
+          client_key: clientId,
+          client_secret: clientSecret,
+          grant_type: 'client_credentials'
+        }
+      }
+    );
+    
+    if (!tokenResponse.data || !tokenResponse.data.data || !tokenResponse.data.data.access_token) {
+      logger.error('Failed to obtain TikTok access token: Invalid response format');
+      return null;
+    }
+    
+    const accessToken = tokenResponse.data.data.access_token;
+    const expiresIn = tokenResponse.data.data.expires_in;
+    
+    logger.log(`TikTok access token obtained successfully. Expires in ${expiresIn} seconds`);
+    
+    // Step 2: Verify the token by making a test API call
+    const verifyResponse = await axios.get(
+      'https://open-api.tiktok.com/v2/user/info/',
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        params: {
+          fields: 'open_id,union_id,avatar_url,display_name'
+        }
+      }
+    );
+    
+    if (verifyResponse.data && verifyResponse.data.data) {
+      logger.log('TikTok API token verified successfully');
+    } else {
+      logger.warn('TikTok API token verification returned unexpected response');
+    }
+    
+    return {
+      clientId,
+      clientSecret,
+      accessToken,
+      expiresAt: Date.now() + (expiresIn * 1000)
+    };
+  } catch (error) {
+    logger.error(`Error initializing TikTok API: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Initialize TikTok platform
  */
 export async function initialize() {
   try {
+    // Initialize TikTok API
+    tiktokApiToken = await initTikTokAPI();
+    
     // Apply stealth plugin to avoid detection
     puppeteer.use(StealthPlugin());
     
@@ -289,6 +361,91 @@ export async function messageUser(username, message) {
       await page.click('button[data-e2e="comment-post"]');
       
       logger.log(`\u2705 Commented on TikTok user @${username}'s video`);
+      
+      // Wait for the message to be sent
+      await wait(2000);
+      
+      // If we have TikTok API access, use it for direct messaging
+      if (tiktokApiToken) {
+        logger.log(`Using TikTok API with access token for messaging to ${username}`);
+        
+        try {
+          // Step 1: Get the user's open_id using their username
+          const userResponse = await axios.get(
+            'https://open-api.tiktok.com/v2/user/info/',
+            {
+              headers: {
+                'Authorization': `Bearer ${tiktokApiToken.accessToken}`
+              },
+              params: {
+                'username': username,
+                'fields': 'open_id,union_id,avatar_url,display_name,bio_description'
+              }
+            }
+          );
+          
+          if (!userResponse.data || !userResponse.data.data || !userResponse.data.data.user) {
+            logger.warn(`Could not find TikTok user ${username} via API`);
+            // Continue with browser-based approach as fallback
+          } else {
+            const userData = userResponse.data.data.user;
+            const openId = userData.open_id;
+            
+            logger.log(`Found TikTok user ${username} with open_id: ${openId.substring(0, 8)}...`);
+            
+            // Step 2: Send a direct message using the Business Messages API
+            // Note: This requires the Video Messaging API permission
+            const messageResponse = await axios.post(
+              'https://open-api.tiktok.com/v2/business/message/send/',
+              {
+                recipient: {
+                  open_id: openId
+                },
+                message: {
+                  text: {
+                    text: message
+                  }
+                },
+                // You can also send media, buttons, or cards
+                // media: {
+                //   image: {
+                //     url: 'https://example.com/image.jpg'
+                //   }
+                // }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${tiktokApiToken.accessToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            
+            if (messageResponse.data && messageResponse.data.data && messageResponse.data.data.message_id) {
+              logger.log(`Message sent successfully via TikTok API. Message ID: ${messageResponse.data.data.message_id}`);
+              
+              // Increment message count
+              await rateLimiter.incrementActionCount('tiktok_message');
+              
+              return true;
+            } else {
+              logger.warn('TikTok API message send failed or returned unexpected response');
+              // Continue with browser-based approach as fallback
+            }
+          }
+        } catch (apiError) {
+          logger.error(`Error using TikTok API for messaging: ${apiError.message}`);
+          logger.log('Falling back to browser-based messaging method');
+          // Continue with browser-based approach as fallback
+        }
+      }
+      
+      // Increment message count
+      await rateLimiter.incrementActionCount('tiktok_message');
+      
+      logger.log(`Message sent to TikTok user ${username}`);
+      return true;
+      
     } catch (error) {
       logger.warn(`Could not comment on @${username}'s video: ${error.message}`);
     }
@@ -296,7 +453,7 @@ export async function messageUser(username, message) {
     // Increment message count
     await rateLimiter.incrementActionCount('tiktok_message');
     
-    return true;
+    return false;
     
   } catch (error) {
     logger.error(`Error messaging TikTok user ${username}: ${error.message}`);

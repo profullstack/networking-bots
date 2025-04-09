@@ -11,6 +11,8 @@ import { logger } from './utils/logger.mjs';
 // Import platform modules
 import * as tiktok from './platforms/tiktok.mjs';
 import * as x from './platforms/x.mjs';
+import * as youtube from './platforms/youtube.mjs';
+import * as facebook from './platforms/facebook.mjs';
 
 // Import services
 import { proxyManager } from './services/proxy-manager.mjs';
@@ -31,7 +33,9 @@ const config = JSON.parse(await fs.readFile(path.join(__dirname, '../config.json
 // Map platform names to their modules
 const platforms = {
   tiktok,
-  x
+  x,
+  youtube,
+  facebook
 };
 
 /**
