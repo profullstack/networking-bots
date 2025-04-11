@@ -30,6 +30,13 @@ class RateLimiter {
     });
   }
 
+  async initialize() {
+    // Reset counters on initialization
+    await this.resetCounters();
+    logger.info('Rate limiter initialized');
+    return true;
+  }
+
   async resetCounters() {
     const currentDate = new Date().toDateString();
     

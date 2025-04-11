@@ -26,53 +26,76 @@ async function initTikTokAPI() {
     logger.log('TikTok API credentials found - initializing API client');
     
     // Step 1: Get an access token using client credentials
-    const tokenResponse = await axios.post(
-      'https://open-api.tiktok.com/oauth/access_token/',
-      null,
-      {
-        params: {
-          client_key: clientId,
-          client_secret: clientSecret,
-          grant_type: 'client_credentials'
+    try {
+      const tokenResponse = await axios.post(
+        'https://open-api.tiktok.com/oauth/access_token/',
+        null,
+        {
+          params: {
+            client_key: clientId,
+            client_secret: clientSecret,
+            grant_type: 'client_credentials'
+          }
         }
+      );
+      
+      logger.debug('TikTok token response:', JSON.stringify(tokenResponse.data, null, 2));
+      
+      if (!tokenResponse.data) {
+        logger.error('Failed to obtain TikTok access token: Empty response');
+        return null;
       }
-    );
+      
+      // Handle different response formats
+      let accessToken, expiresIn;
+      
+      if (tokenResponse.data.data && tokenResponse.data.data.access_token) {
+        // Standard format
+        accessToken = tokenResponse.data.data.access_token;
+        expiresIn = tokenResponse.data.data.expires_in || 86400; // Default to 24 hours
+      } else if (tokenResponse.data.access_token) {
+        // Alternative format
+        accessToken = tokenResponse.data.access_token;
+        expiresIn = tokenResponse.data.expires_in || 86400;
+      } else {
+        logger.error('Failed to obtain TikTok access token: Invalid response format');
+        return null;
+      }
     
-    if (!tokenResponse.data || !tokenResponse.data.data || !tokenResponse.data.data.access_token) {
-      logger.error('Failed to obtain TikTok access token: Invalid response format');
+      // Step 2: Verify the token by making a test API call
+      try {
+        const verifyResponse = await axios.get(
+          'https://open-api.tiktok.com/v2/user/info/',
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            },
+            params: {
+              fields: 'open_id,union_id,avatar_url,display_name'
+            }
+          }
+        );
+        
+        if (verifyResponse.data && verifyResponse.data.data) {
+          logger.log('TikTok API token verified successfully');
+        } else {
+          logger.warn('TikTok API token verification returned unexpected response');
+        }
+      } catch (error) {
+        logger.warn(`TikTok API token verification failed: ${error.message}`);
+        // Continue anyway as we have the token
+      }
+      
+      return {
+        clientId,
+        clientSecret,
+        accessToken,
+        expiresAt: Date.now() + (expiresIn * 1000)
+      };
+    } catch (error) {
+      logger.error(`Error obtaining TikTok access token: ${error.message}`);
       return null;
     }
-    
-    const accessToken = tokenResponse.data.data.access_token;
-    const expiresIn = tokenResponse.data.data.expires_in;
-    
-    logger.log(`TikTok access token obtained successfully. Expires in ${expiresIn} seconds`);
-    
-    // Step 2: Verify the token by making a test API call
-    const verifyResponse = await axios.get(
-      'https://open-api.tiktok.com/v2/user/info/',
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        params: {
-          fields: 'open_id,union_id,avatar_url,display_name'
-        }
-      }
-    );
-    
-    if (verifyResponse.data && verifyResponse.data.data) {
-      logger.log('TikTok API token verified successfully');
-    } else {
-      logger.warn('TikTok API token verification returned unexpected response');
-    }
-    
-    return {
-      clientId,
-      clientSecret,
-      accessToken,
-      expiresAt: Date.now() + (expiresIn * 1000)
-    };
   } catch (error) {
     logger.error(`Error initializing TikTok API: ${error.message}`);
     return null;
@@ -91,7 +114,13 @@ export async function initialize() {
     puppeteer.use(StealthPlugin());
     
     // Get a proxy for the session
-    const proxy = await proxyManager.getNextProxy();
+    let proxy = null;
+    try {
+      proxy = await proxyManager.getNextProxy();
+    } catch (error) {
+      logger.warn(`Unable to get proxy: ${error.message}`);
+      logger.warn('Will continue without proxy');
+    }
     
     // Launch browser with proxy and stealth settings
     const launchOptions = {
@@ -111,6 +140,8 @@ export async function initialize() {
     if (proxy) {
       launchOptions.args.push(`--proxy-server=${proxy.proxy_address}:${proxy.port}`);
       logger.log(`Using proxy: ${proxy.proxy_address}:${proxy.port}`);
+    } else {
+      logger.info('No proxy available, continuing without proxy');
     }
     
     browser = await puppeteer.launch(launchOptions);

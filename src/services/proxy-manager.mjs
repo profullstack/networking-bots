@@ -80,18 +80,35 @@ class ProxyManager {
   }
 
   async initialize() {
+    let apiProxies = [];
+    let apiError = null;
+    
     // If API token is provided, try API first
     if (this.proxyApiToken) {
-      const apiProxies = await this.fetchProxiesFromApi();
-      if (apiProxies.length > 0) {
-        await this.loadProxies(apiProxies);
-        return;
+      try {
+        apiProxies = await this.fetchProxiesFromApi();
+        if (apiProxies.length > 0) {
+          await this.loadProxies(apiProxies);
+          return;
+        }
+      } catch (error) {
+        apiError = error;
+        logger.warn(`API proxy fetch failed: ${error.message}. Falling back to file.`);
       }
+    } else {
+      logger.info('No proxy API token provided, using file-based proxies');
     }
 
     // Fallback to file or if no API token provided
-    const fileProxies = await this.fetchProxiesFromFile();
-    await this.loadProxies(fileProxies);
+    try {
+      const fileProxies = await this.fetchProxiesFromFile();
+      await this.loadProxies(fileProxies);
+    } catch (error) {
+      logger.error(`Failed to load proxies from file: ${error.message}`);
+      // If both API and file failed, throw the API error if it exists
+      if (apiError) throw apiError;
+      throw error;
+    }
   }
 
   async loadProxies(proxies) {

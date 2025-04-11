@@ -184,6 +184,11 @@ class HumanBehaviorSimulator {
       await this.simulateScroll(page);
     }
   }
+
+  async simulateDelay() {
+    const delay = this.baseTypingDelay + (Math.random() * this.typingVariance);
+    await new Promise(r => setTimeout(r, delay));
+  }
 }
 
 // Export singleton instance

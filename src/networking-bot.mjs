@@ -51,6 +51,8 @@ async function initialize() {
   } catch (error) {
     logger.warn(`⚠️ Proxy manager initialization had issues: ${error.message}`);
     logger.warn('Will continue without proxies');
+    // Create an empty proxy list to prevent further errors
+    proxyManager.proxyList = [];
   }
   
   // Initialize rate limiter
@@ -95,11 +97,13 @@ async function runPlatform(platformName) {
   const messaged = await loadMessagedUsers(platformName);
   
   try {
-    // Check if we're within working hours
-    const hour = new Date().getHours();
-    if (hour < 8 || hour > 22) {
-      logger.log('Outside working hours (8 AM - 10 PM). Skipping this run.');
-      return;
+    // Check if we're within working hours (if enabled)
+    if (config.settings?.respectWorkingHours) {
+      const hour = new Date().getHours();
+      if (hour < 8 || hour > 22) {
+        logger.log('Outside working hours (8 AM - 10 PM). Skipping this run.');
+        return;
+      }
     }
     
     // Find potential users based on search terms
