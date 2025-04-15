@@ -7,43 +7,46 @@ import { humanBehavior } from '../services/human-behavior.mjs';
 import { rateLimiter } from '../services/rate-limiter.mjs';
 import { proxyManager } from '../services/proxy-manager.mjs';
 
-let browser;
-let page;
-let loginSuccessful = false;
-
-/**
- * Check if we need to log in to X.com
- * @returns {Promise<boolean>} True if login is needed
- */
-async function needsLogin() {
-  if (!page) {
-    throw new Error('X.com browser not initialized');
+export default class X {
+  constructor() {
+    this.browser = null;
+    this.page = null;
+    this.loginSuccessful = false;
   }
 
-  try {
-    // Check if we're on the login page or home page
-    const url = page.url();
-    if (url.includes('login') || url.includes('i/flow/login')) {
-      return true;
+  /**
+   * Check if we need to log in to X.com
+   * @returns {Promise<boolean>} True if login is needed
+   */
+  async needsLogin() {
+    if (!this.page) {
+      throw new Error('X.com browser not initialized');
     }
 
-    // Check for login button
-    const loginButton = await page.$('[data-testid="loginButton"]');
-    return !!loginButton;
-  } catch (error) {
-    logger.error(`Error checking login status: ${error.message}`);
-    return true; // Assume login needed on error
-  }
-}
+    try {
+      // Check if we're on the login page or home page
+      const currentUrl = this.page.url();
+      if (currentUrl.includes('login') || currentUrl.includes('i/flow/login')) {
+        return true;
+      }
 
-/**
- * Login to X.com
- * @returns {Promise<boolean>} Success status
- */
-async function login() {
-  try {
-    const username = process.env.X_USERNAME;
-    const password = process.env.X_PASSWORD;
+      // Check for login button
+      const loginButton = await this.page.$('[data-testid="loginButton"]');
+      return !!loginButton;
+    } catch (error) {
+      logger.error(`Error checking login status: ${error.message}`);
+      return true; // Assume login needed on error
+    }
+  }
+
+  /**
+   * Login to X.com
+   * @returns {Promise<boolean>} Success status
+   */
+  async login() {
+    try {
+      const username = process.env.X_USERNAME;
+      const password = process.env.X_PASSWORD;
 
     // Debug environment variables
     logger.log('Debugging X credentials:');
@@ -881,11 +884,24 @@ async function login() {
             const verificationInput = await page.$(selector);
             if (verificationInput) {
               logger.log('Verification code input detected. X.com is requesting additional verification.');
-              logger.log('Please check your email for a verification code and update your login process.');
-              logger.log('A screenshot has been saved to login-verification-debug.png');
-
-              // Manual intervention needed
-              throw new Error('Email verification code required. Please check your email and run the bot again.');
+              
+              // Save screenshot for debugging
+              await page.screenshot({ path: 'screenshots/login-verification-debug.png' });
+              logger.log('A screenshot has been saved to screenshots/login-verification-debug.png');
+              
+              // Set up verification code handling
+              const verificationCode = await this.handleVerificationCode();
+              
+              // Enter the verification code
+              await verificationInput.type(verificationCode);
+              await wait(1000); // Small wait for input to register
+              
+              // Find and click the verification submit button
+              const submitButton = await page.$('div[role="button"][tabindex="0"]');
+              if (submitButton) {
+                await submitButton.click();
+                await wait(3000); // Wait for verification to process
+              }
             }
           }
 
@@ -905,7 +921,7 @@ async function login() {
 
         // Wait for home page to load
         try {
-          await page.waitForFunction(() => document.querySelector('span')?.textContent === 'Everyone', { timeout: 30000 });
+          await this.page.waitForFunction(() => document.querySelector('span')?.textContent === 'Everyone', { timeout: 30000 });
 
           logger.log('Successfully logged in to X.com');
           loginSuccessful = true;
@@ -936,33 +952,33 @@ async function login() {
     }
   } catch (error) {
     logger.error(`Failed to log in to X.com: ${error.message}`);
-    loginSuccessful = false;
+    this.loginSuccessful = false;
     return false;
   }
-}
+  }
 
-/**
- * Initialize X platform
- */
-export async function initialize() {
-  try {
-    // Apply stealth plugin to avoid detection
-    puppeteer.use(StealthPlugin());
-
-    // Get a proxy for the session
-    let proxy = null;
+  /**
+   * Initialize X platform
+   */
+  async initialize() {
     try {
-      proxy = await proxyManager.getNextProxy();
-    } catch (error) {
-      logger.warn(`Unable to get proxy: ${error.message}`);
-      logger.warn('Will continue without proxy');
-    }
+      // Apply stealth plugin to avoid detection
+      puppeteer.use(StealthPlugin());
 
-    // Launch browser with proxy and stealth settings
-    const launchOptions = {
-      headless: 'new',
-      args: [
-        '--no-sandbox',
+      // Get a proxy for the session
+      let proxy = null;
+      try {
+        proxy = await proxyManager.getNextProxy();
+      } catch (error) {
+        logger.warn(`Unable to get proxy: ${error.message}`);
+        logger.warn('Will continue without proxy');
+      }
+
+      // Launch browser with proxy and stealth settings
+      const launchOptions = {
+        headless: 'new',
+        args: [
+          '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
         '--window-position=0,0',
@@ -1052,13 +1068,13 @@ export async function initialize() {
  * @param {Array<string>} searchTerms - List of search terms to find users
  * @returns {Promise<Array<string>>} - List of usernames
  */
-export async function findPotentialUsers(searchTerms) {
-  if (!browser || !page) {
-    throw new Error('X.com browser not initialized');
-  }
+  async findPotentialUsers(searchTerms) {
+    if (!this.page) {
+      throw new Error('X.com browser not initialized');
+    }
 
-  // Check if login was successful before proceeding
-  if (!loginSuccessful) {
+    // Check if login was successful before proceeding
+    if (!this.loginSuccessful) {
     logger.warn('Cannot search for users: Login to X.com was not successful');
     return [];
   }
@@ -1163,12 +1179,12 @@ export async function findPotentialUsers(searchTerms) {
  * @param {string} message - Message to send
  * @returns {Promise<boolean>} - Success status
  */
-export async function messageUser(username, message) {
-  logger.log(`[${dayjs().format('HH:mm')}] Attempting to message X.com user: ${username}`);
+  async messageUser(username, message) {
+    logger.log(`[${dayjs().format('HH:mm')}] Attempting to message X.com user: ${username}`);
 
-  // Check if login was successful before proceeding
-  if (!loginSuccessful) {
-    logger.warn('Cannot message users: Login to X.com was not successful');
+    // Check if login was successful before proceeding
+    if (!this.loginSuccessful) {
+      logger.warn('Cannot message users: Login to X.com was not successful');
     return false;
   }
 
@@ -1322,14 +1338,100 @@ export async function messageUser(username, message) {
   }
 }
 
-/**
- * Close the X.com browser instance
- */
-export async function cleanup() {
-  if (browser) {
-    await browser.close();
-    browser = null;
-    page = null;
-    logger.log('X.com browser closed');
+  /**
+   * Close the X.com browser instance
+   */
+  async cleanup() {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+      this.page = null;
+      logger.log('X.com browser closed');
+    }
+  }
+
+  /**
+   * Handle verification code input through a local web server
+   * @returns {Promise<string>} The verification code entered by the user
+   */
+  async handleVerificationCode() {
+    // Create a simple HTTP server to receive the verification code
+    const http = await import('http');
+    const url = await import('url');
+    
+    return new Promise((resolve, reject) => {
+      const server = http.createServer(async (req, res) => {
+        const parsedUrl = url.parse(req.url, true);
+        
+        if (parsedUrl.pathname === '/verify') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          req.on('end', () => {
+            try {
+              const { code } = JSON.parse(body);
+              if (code) {
+                resolve(code);
+                res.end(JSON.stringify({ status: 'success' }));
+                server.close();
+              } else {
+                res.end(JSON.stringify({ status: 'error', message: 'No code provided' }));
+              }
+            } catch (e) {
+              res.end(JSON.stringify({ status: 'error', message: 'Invalid JSON' }));
+            }
+          });
+        } else {
+          // Serve a simple HTML form
+          res.end(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>X.com Verification Code</title>
+                <style>
+                  body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+                  input, button { font-size: 16px; padding: 8px; margin: 10px 0; }
+                  button { background: #1da1f2; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+                </style>
+              </head>
+              <body>
+                <h2>Enter X.com Verification Code</h2>
+                <p>Please enter the verification code sent to your email:</p>
+                <input type="text" id="code" placeholder="Enter verification code" />
+                <button onclick="submitCode()">Submit</button>
+                <script>
+                  function submitCode() {
+                    const code = document.getElementById('code').value;
+                    fetch('/verify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ code })
+                    }).then(r => r.json()).then(data => {
+                      if (data.status === 'success') {
+                        document.body.innerHTML = '<h2>Success!</h2><p>You can close this window now.</p>';
+                      }
+                    });
+                  }
+                </script>
+              </body>
+            </html>
+          `);
+        }
+      }
+    });
+
+    const port = 3333;
+    server.listen(port, () => {
+      logger.log(`Verification page is running at http://localhost:${port}/verify`);
+      logger.log('Please open this URL in your browser and enter the verification code when you receive it.');
+    });
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      server.close();
+      reject(new Error('Verification code input timed out after 5 minutes'));
+    }, 5 * 60 * 1000);
+  });
   }
 }
