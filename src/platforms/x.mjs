@@ -714,8 +714,8 @@ export default class X {
 
         if (!passwordInput) {
           // Take a screenshot to debug
-          await page.screenshot({ path: 'password-field-debug.png' });
-          logger.log('Saved screenshot to password-field-debug.png');
+          await page.screenshot({ path: 'screenshots/password-field-debug.png' });
+          logger.log('Saved screenshot to screenshots/password-field-debug.png');
           throw new Error('Could not find password input field');
         }
 
@@ -859,8 +859,8 @@ export default class X {
 
         if (!loginButtonFound) {
           // Take a screenshot to debug
-          await page.screenshot({ path: 'login-button-debug.png' });
-          logger.log('Saved screenshot to login-button-debug.png');
+          await page.screenshot({ path: 'screenshots/login-button-debug.png' });
+          logger.log('Saved screenshot to screenshots/login-button-debug.png');
           throw new Error('Could not find login button');
         }
 
@@ -869,8 +869,8 @@ export default class X {
         // Check for verification code request
         try {
           // Take a screenshot to see what's happening
-          await page.screenshot({ path: 'login-verification-debug.png' });
-          logger.log('Saved screenshot to login-verification-debug.png');
+          await page.screenshot({ path: 'screenshots/login-verification-debug.png' });
+          logger.log('Saved screenshot to screenshots/login-verification-debug.png');
 
           // Check for common verification elements
           const verificationSelectors = [
