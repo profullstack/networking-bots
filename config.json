@@ -1,7 +1,7 @@
 {
   "platforms": {
     "tiktok": {
-      "enabled": false,
+      "enabled": true,
       "message": "Hey! I noticed your content about networking — I help run a tech founder networking group, would you like to join?"
     },
     "x": {
@@ -9,11 +9,11 @@
       "message": "Hey! I noticed your tweets about networking — I help run a tech founder networking group, would you like to join?"
     },
     "youtube": {
-      "enabled": false,
+      "enabled": true,
       "message": "Hey! I noticed your videos about networking — I help run a tech founder networking group, would you like to join?"
     },
     "facebook": {
-      "enabled": false,
+      "enabled": true,
       "message": "Hey! I noticed your posts about networking — I help run a tech founder networking group, would you like to join?"
     }
   },

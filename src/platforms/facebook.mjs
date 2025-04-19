@@ -346,9 +346,21 @@ export async function messageUser(userId, message) {
       logger.log(`Using Facebook API for messaging with token ${fbApiAccessToken.substring(0, 10)}...`);
       
       try {
-        // First check if we need to use the Page Access Token instead of App Access Token
+        // Handle the OAuth flow for Facebook messaging
         // For messaging, Facebook requires a Page Access Token with proper permissions
-        // This is a simplified implementation - in production, you'd need to handle the OAuth flow
+        // 1. Check if we have a valid token, if not initiate the OAuth flow
+        // 2. Verify token permissions and refresh if needed
+        // 3. Get page access token which has the required permissions for messaging
+        
+        // Check if token is valid or expired
+        const tokenInfo = await this.verifyAccessToken(fbApiAccessToken);
+        if (!tokenInfo.isValid) {
+          logger.warn('Facebook access token is invalid or expired, refreshing...');
+          fbApiAccessToken = await this.refreshAccessToken();
+          if (!fbApiAccessToken) {
+            throw new Error('Failed to refresh Facebook access token');
+          }
+        }
         
         // Get the page ID associated with the app
         const pagesResponse = await axios.get(
@@ -430,5 +442,79 @@ export async function cleanup() {
     } catch (error) {
       logger.error(`Error closing Facebook browser: ${error.message}`);
     }
+  }
+}
+
+/**
+ * Verify if the Facebook access token is valid and has the required permissions
+ * @param {string} accessToken - The Facebook access token to verify
+ * @returns {Promise<Object>} - Object containing validity status and permissions
+ */
+export async function verifyAccessToken(accessToken) {
+  try {
+    // Check token debug info using Graph API
+    const response = await axios.get(
+      `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${accessToken}`
+    );
+    
+    if (response.data && response.data.data) {
+      const tokenData = response.data.data;
+      const isValid = tokenData.is_valid === true;
+      const expiresAt = tokenData.expires_at ? new Date(tokenData.expires_at * 1000) : null;
+      const isExpired = expiresAt ? new Date() > expiresAt : false;
+      const scopes = tokenData.scopes || [];
+      
+      // Check if token has required permissions for messaging
+      const hasMessagingPermissions = scopes.includes('pages_messaging') || 
+                                     scopes.includes('pages_messaging_subscriptions');
+      
+      return {
+        isValid: isValid && !isExpired,
+        isExpired,
+        expiresAt,
+        hasMessagingPermissions,
+        scopes
+      };
+    }
+    
+    return { isValid: false };
+  } catch (error) {
+    logger.error(`Error verifying Facebook access token: ${error.message}`);
+    return { isValid: false, error: error.message };
+  }
+}
+
+/**
+ * Refresh the Facebook access token using the app credentials and refresh token
+ * @returns {Promise<string|null>} - New access token or null if refresh failed
+ */
+export async function refreshAccessToken() {
+  const appId = process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
+  const refreshToken = process.env.FACEBOOK_REFRESH_TOKEN;
+  
+  if (!appId || !appSecret) {
+    logger.error('Facebook API credentials not found in environment variables');
+    return null;
+  }
+  
+  try {
+    // If we have a refresh token, use it to get a new access token
+    if (refreshToken) {
+      const response = await axios.get(
+        `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${refreshToken}`
+      );
+      
+      if (response.data && response.data.access_token) {
+        logger.log('Facebook access token refreshed successfully');
+        return response.data.access_token;
+      }
+    }
+    
+    // If no refresh token or refresh failed, try to get a new app access token
+    return await initFacebookAPI();
+  } catch (error) {
+    logger.error(`Error refreshing Facebook access token: ${error.message}`);
+    return null;
   }
 }
