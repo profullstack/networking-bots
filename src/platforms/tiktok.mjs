@@ -27,18 +27,23 @@ async function initTikTokAPI() {
     
     // Step 1: Get an access token using client credentials
     try {
+      // Try the v2 endpoint first
+      logger.log('Attempting to get TikTok access token using v2 endpoint');
       const tokenResponse = await axios.post(
-        'https://open-api.tiktok.com/oauth/access_token/',
-        null,
+        'https://open.tiktokapis.com/v2/oauth/token/',
         {
-          params: {
-            client_key: clientId,
-            client_secret: clientSecret,
-            grant_type: 'client_credentials'
+          client_key: clientId,
+          client_secret: clientSecret,
+          grant_type: 'client_credentials'
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
           }
         }
       );
       
+      // Log the full response for debugging
       logger.debug('TikTok token response:', JSON.stringify(tokenResponse.data, null, 2));
       
       if (!tokenResponse.data) {
@@ -49,26 +54,64 @@ async function initTikTokAPI() {
       // Handle different response formats
       let accessToken, expiresIn;
       
+      // Log the structure of the response to help debug
+      logger.debug('TikTok response structure: ' + JSON.stringify(Object.keys(tokenResponse.data)));
+      
+      // TikTok API v2 format (data.access_token)
       if (tokenResponse.data.data && tokenResponse.data.data.access_token) {
-        // Standard format
+        logger.debug('Using TikTok API v2 response format');
         accessToken = tokenResponse.data.data.access_token;
         expiresIn = tokenResponse.data.data.expires_in || 86400; // Default to 24 hours
-      } else if (tokenResponse.data.access_token) {
-        // Alternative format
+      } 
+      // Standard OAuth format (access_token directly in response)
+      else if (tokenResponse.data.access_token) {
+        logger.debug('Using standard OAuth response format');
         accessToken = tokenResponse.data.access_token;
         expiresIn = tokenResponse.data.expires_in || 86400;
+      }
+      // TikTok API v1 format (message.access_token)
+      else if (tokenResponse.data.message && tokenResponse.data.message.access_token) {
+        logger.debug('Using TikTok API v1 response format');
+        accessToken = tokenResponse.data.message.access_token;
+        expiresIn = tokenResponse.data.message.expires_in || 86400;
+      }
+      // Handle additional possible formats
+      else if (typeof tokenResponse.data === 'string') {
+        try {
+          // Try parsing if the response is a JSON string
+          const parsedData = JSON.parse(tokenResponse.data);
+          logger.debug('Parsed string response: ' + JSON.stringify(Object.keys(parsedData)));
+          
+          if (parsedData.access_token) {
+            accessToken = parsedData.access_token;
+            expiresIn = parsedData.expires_in || 86400;
+          } else if (parsedData.data && parsedData.data.access_token) {
+            accessToken = parsedData.data.access_token;
+            expiresIn = parsedData.data.expires_in || 86400;
+          } else {
+            logger.error('Failed to find access token in parsed string response');
+            return null;
+          }
+        } catch (parseError) {
+          logger.error(`Failed to parse TikTok string response: ${parseError.message}`);
+          return null;
+        }
       } else {
         logger.error('Failed to obtain TikTok access token: Invalid response format');
+        logger.error('Response data type: ' + typeof tokenResponse.data);
+        console.log(tokenResponse.data)
         return null;
       }
     
       // Step 2: Verify the token by making a test API call
       try {
+        logger.log('Verifying TikTok access token with API call');
         const verifyResponse = await axios.get(
-          'https://open-api.tiktok.com/v2/user/info/',
+          'https://open.tiktokapis.com/v2/research/user/info/',
           {
             headers: {
-              'Authorization': `Bearer ${accessToken}`
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
             },
             params: {
               fields: 'open_id,union_id,avatar_url,display_name'
