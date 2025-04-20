@@ -29,16 +29,16 @@ async function initTikTokAPI() {
     try {
       // Try the v2 endpoint first
       logger.log('Attempting to get TikTok access token using v2 endpoint');
+      const params = new URLSearchParams();
+      params.append('client_key', clientId);
+      params.append('client_secret', clientSecret);
+      params.append('grant_type', 'client_credentials');
       const tokenResponse = await axios.post(
         'https://open.tiktokapis.com/v2/oauth/token/',
-        {
-          client_key: clientId,
-          client_secret: clientSecret,
-          grant_type: 'client_credentials'
-        },
+        params,
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
           }
         }
       );
@@ -103,31 +103,8 @@ async function initTikTokAPI() {
         return null;
       }
     
-      // Step 2: Verify the token by making a test API call
-      try {
-        logger.log('Verifying TikTok access token with API call');
-        const verifyResponse = await axios.get(
-          'https://open.tiktokapis.com/v2/research/user/info/',
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
-            },
-            params: {
-              fields: 'open_id,union_id,avatar_url,display_name'
-            }
-          }
-        );
-        
-        if (verifyResponse.data && verifyResponse.data.data) {
-          logger.log('TikTok API token verified successfully');
-        } else {
-          logger.warn('TikTok API token verification returned unexpected response');
-        }
-      } catch (error) {
-        logger.warn(`TikTok API token verification failed: ${error.message}`);
-        // Continue anyway as we have the token
-      }
+      // Step 2: Skipping token verification for app tokens.
+      logger.warn('TikTok API: Skipping token verification. /v2/user/info/ requires a user OAuth token, not an app (client credentials) token.');
       
       return {
         clientId,

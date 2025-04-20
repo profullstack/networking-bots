@@ -13,6 +13,8 @@ import * as tiktok from './platforms/tiktok.mjs';
 import * as x from './platforms/x.mjs';
 import * as youtube from './platforms/youtube.mjs';
 import * as facebook from './platforms/facebook.mjs';
+import * as reddit from './platforms/reddit.mjs';
+import * as linkedin from './platforms/linkedin.mjs';
 
 // Import services
 import { proxyManager } from './services/proxy-manager.mjs';
@@ -35,7 +37,9 @@ const platforms = {
   tiktok,
   x,
   youtube,
-  facebook
+  facebook,
+  reddit,
+  linkedin
 };
 
 /**
