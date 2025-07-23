@@ -8,12 +8,80 @@ import { proxyManager } from '../services/proxy-manager.mjs';
 let browser;
 let page;
 
+// Load accounts from accounts.json
+async function loadAccountsData() {
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    
+    const accountsPath = path.join(__dirname, '../../accounts.json');
+    const data = await fs.readFile(accountsPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    // If file doesn't exist or is invalid, return empty object
+    return {};
+  }
+}
+
+// Get active account for LinkedIn
+async function getActiveLinkedInAccount() {
+  const accounts = await loadAccountsData();
+  if (!accounts.linkedin) return null;
+  return accounts.linkedin.find(acc => acc.active) || null;
+}
+
+// Decrypt password
+function decrypt(hash) {
+  if (!hash || !hash.iv || !hash.content) {
+    return null;
+  }
+  
+  const crypto = require('crypto');
+  const algorithm = 'aes-256-ctr';
+  const secretKey = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-me';
+  
+  try {
+    const decipher = crypto.createDecipheriv(
+      algorithm,
+      secretKey,
+      Buffer.from(hash.iv, 'hex')
+    );
+    
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(hash.content, 'hex')),
+      decipher.final()
+    ]);
+    
+    return decrypted.toString();
+  } catch (error) {
+    logger.error('Failed to decrypt password:', error.message);
+    return null;
+  }
+}
+
 // Initialize LinkedIn browser automation
 async function initLinkedInAPI() {
-  const username = process.env.LINKEDIN_USERNAME;
-  const password = process.env.LINKEDIN_PASSWORD;
+  // Try to get credentials from account management system first
+  let username, password;
+  
+  const activeAccount = await getActiveLinkedInAccount();
+  if (activeAccount) {
+    username = activeAccount.username;
+    password = decrypt(activeAccount.password);
+    logger.log(`Using account ${username} from account management system`);
+  } else {
+    // Fall back to environment variables
+    username = process.env.LINKEDIN_USERNAME;
+    password = process.env.LINKEDIN_PASSWORD;
+    logger.log('Using LinkedIn credentials from environment variables');
+  }
+  
   if (!username || !password) {
-    logger.warn('LinkedIn credentials not found in environment variables');
+    logger.warn('LinkedIn credentials not found in account management system or environment variables');
     return null;
   }
   try {

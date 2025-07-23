@@ -23,6 +23,9 @@ import { rateLimiter } from './services/rate-limiter.mjs';
 // Import utilities
 import { loadMessagedUsers, saveMessagedUsers, migrateMessagedUsers } from './utils.mjs';
 
+// Import profile creator
+import { createProfiles } from './profile-creator.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -30,7 +33,48 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Load config from config.json
-const config = JSON.parse(await fs.readFile(path.join(__dirname, '../config.json')));
+let config = {};
+async function loadConfig() {
+  try {
+    const configPath = path.join(__dirname, '../config.json');
+    const data = await fs.readFile(configPath, 'utf8');
+    config = JSON.parse(data);
+  } catch (error) {
+    logger.error(`Error loading config: ${error.message}`);
+    // Set default config
+    config = {
+      platforms: {
+        tiktok: { enabled: false },
+        x: { enabled: false },
+        youtube: { enabled: false },
+        facebook: { enabled: false },
+        reddit: { enabled: false },
+        linkedin: { enabled: false }
+      },
+      searchTerms: {},
+      settings: { respectWorkingHours: false }
+    };
+  }
+}
+
+// Load accounts from accounts.json
+async function loadAccountsData() {
+  try {
+    const accountsPath = path.join(__dirname, '../accounts.json');
+    const data = await fs.readFile(accountsPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    // If file doesn't exist or is invalid, return empty object
+    return {};
+  }
+}
+
+// Get active account for a platform
+async function getActiveAccount(platform) {
+  const accounts = await loadAccountsData();
+  if (!accounts[platform]) return null;
+  return accounts[platform].find(acc => acc.active) || null;
+}
 
 // Map platform names to their modules
 const platforms = {
@@ -161,6 +205,20 @@ async function cleanup() {
  * Main function that runs all enabled platforms
  */
 async function main() {
+  // Check for command line arguments
+  const args = process.argv.slice(2);
+  
+  // Handle --create-profiles command
+  if (args.includes('--create-profiles')) {
+    logger.log('Starting profile creation mode...');
+    await createProfiles();
+    process.exit(0);
+    return;
+  }
+  
+  // Load config for normal operation (not needed for profile creation)
+  await loadConfig();
+  
   logger.log(`\n🤖 Starting networking bot at ${dayjs().format('YYYY-MM-DD HH:mm')}`);
   
   try {

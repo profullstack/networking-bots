@@ -255,19 +255,51 @@ class ProxyManager {
     logger.info(`Using proxy: ${this.currentProxy.proxy_address}:${this.currentProxy.port}`);
     return this.currentProxy;
   }
-
   async rotateProxy() {
     // If we just rotated recently, don't rotate again
     if (this.lastRotation && Date.now() - this.lastRotation < 60000) {
       logger.debug('Skipping proxy rotation (too soon)');
-      return this.currentProxy;
+      return this.getCurrentProxy();
     }
     
     return this.getNextProxy();
   }
 
-  getCurrentProxy() {
+  async getCurrentProxy() {
+    if (!this.currentProxy) {
+      this.currentProxy = await this.getNextProxy();
+    }
     return this.currentProxy;
+  }
+  
+  /**
+   * Get a proxy for use with HTTP requests
+   * This method is used by the direct account creator
+   * @returns {Promise<Object|null>} Proxy configuration or null if no proxy available
+   */
+  async getProxy() {
+    try {
+      // Get a proxy from the pool
+      const proxy = await this.getNextProxy();
+      
+      if (!proxy) {
+        logger.warn('No proxy available');
+        return null;
+      }
+      
+      // Format proxy for use with axios
+      return {
+        host: proxy.proxy_address,
+        port: proxy.port,
+        auth: proxy.username && proxy.password ? {
+          username: proxy.username,
+          password: proxy.password
+        } : undefined
+      };
+    } catch (error) {
+      logger.error(`Error getting proxy: ${error.message}`);
+      return null;
+    }
   }
 }
 

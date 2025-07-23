@@ -5,7 +5,9 @@
   "description": "A Reddit bot to PM people interested in tech-founder networking groups",
   "main": "src/networking-bot.mjs",
   "scripts": {
-    "start": "node src/networking-bot.mjs"
+    "start": "node src/networking-bot.mjs",
+    "accounts": "node src/account-manager.mjs",
+    "create-profiles": "node src/networking-bot.mjs --create-profiles"
   },
   "dependencies": {
     "@atproto/api": "^0.14.10",
