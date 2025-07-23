@@ -9,9 +9,10 @@ import crypto from 'crypto';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-// Import logger and human behavior simulator
+// Import logger, human behavior simulator, and form detection service
 import { logger } from './utils/logger.mjs';
 import { humanBehavior } from './services/human-behavior.mjs';
+import { formDetection } from './services/form-detection.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,7 +83,7 @@ function generatePassword(length = 12) {
 }
 
 // Create a profile on a specific platform
-async function createProfile(platform, firstName, lastName) {
+async function createProfile(platform, firstName, lastName, useAI = false) {
   logger.log(`\n=== Creating ${platform} profile ===`);
   
   // Ask for email
@@ -105,7 +106,7 @@ async function createProfile(platform, firstName, lastName) {
     // Initialize puppeteer with stealth plugin
     puppeteer.use(StealthPlugin());
     const browser = await puppeteer.launch({
-      headless: false, // Set to false to show the browser during profile creation
+      headless: 'new', // Use headless mode for automation
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1280,800']
     });
     
@@ -115,37 +116,69 @@ async function createProfile(platform, firstName, lastName) {
     
     logger.log('\n🔄 Starting automated signup process...');
     logger.log('⚠️ A browser window will open to the signup page.');
-    logger.log('⚠️ The system will fill in forms automatically where possible.');
-    logger.log('⚠️ You will only need to complete email/phone verification steps.');
+    
+    // Prepare user data for AI-driven account creation
+    const userData = {
+      firstName,
+      lastName,
+      email,
+      password,
+      birthDay: '15', // Default values, can be customized later
+      birthMonth: '6',
+      birthYear: '1990',
+      username: `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(Math.random() * 1000)}`
+    };
     
     // Platform-specific signup process
     let success = false;
     let username = '';
+    let result = {};
     
-    switch (platform) {
-      case 'linkedin':
-        success = await createLinkedInProfile(page, email, password, firstName, lastName);
-        username = email;
-        break;
-      case 'x':
-        [success, username] = await createXProfile(page, email, password, firstName, lastName);
-        break;
-      case 'tiktok':
-        [success, username] = await createTikTokProfile(page, email, password, firstName, lastName);
-        break;
-      case 'youtube':
-        [success, username] = await createYouTubeProfile(page, email, password, firstName, lastName);
-        break;
-      case 'facebook':
-        [success, username] = await createFacebookProfile(page, email, password, firstName, lastName);
-        break;
-      case 'reddit':
-        [success, username] = await createRedditProfile(page, email, password, firstName, lastName);
-        break;
-      default:
-        logger.error(`Unsupported platform: ${platform}`);
-        await browser.close();
-        return null;
+    if (useAI) {
+      // Use AI-driven autonomous account creation
+      logger.log('🤖 Using AI-driven autonomous account creation...');
+      logger.log('⚠️ The AI will attempt to detect and fill forms automatically.');
+      logger.log('⚠️ You may need to complete CAPTCHA or verification steps if prompted.');
+      
+      result = await formDetection.createAccountAutonomously(platform, userData, browser);
+      success = result.success;
+      username = result.username || userData.username || email;
+      
+      if (result.notes && result.notes.length > 0) {
+        logger.log('\nNotes from AI account creation:');
+        result.notes.forEach(note => logger.log(`- ${note}`));
+      }
+    } else {
+      // Use traditional platform-specific signup process
+      logger.log('⚠️ Using traditional signup process with manual assistance.');
+      logger.log('⚠️ The system will fill in forms automatically where possible.');
+      logger.log('⚠️ You will need to complete email/phone verification steps.');
+      
+      switch (platform) {
+        case 'linkedin':
+          success = await createLinkedInProfile(page, email, password, firstName, lastName);
+          username = email;
+          break;
+        case 'x':
+          [success, username] = await createXProfile(page, email, password, firstName, lastName);
+          break;
+        case 'tiktok':
+          [success, username] = await createTikTokProfile(page, email, password, firstName, lastName);
+          break;
+        case 'youtube':
+          [success, username] = await createYouTubeProfile(page, email, password, firstName, lastName);
+          break;
+        case 'facebook':
+          [success, username] = await createFacebookProfile(page, email, password, firstName, lastName);
+          break;
+        case 'reddit':
+          [success, username] = await createRedditProfile(page, email, password, firstName, lastName);
+          break;
+        default:
+          logger.error(`Unsupported platform: ${platform}`);
+          await browser.close();
+          return null;
+      }
     }
     
     await browser.close();
@@ -864,59 +897,77 @@ async function setupRedditProfile(page) {
 
 // Main function to create profiles for all platforms
 export async function createProfiles() {
-  logger.log('\n🤖 Networking Bot - Profile Creator\n');
+  logger.log('=== Profile Creator ===');
+  logger.log('This tool will help you create profiles on various social media platforms.');
   
-  // Ask for first name and last name first
+  // Ask for first name and last name
   const firstName = await prompt('Enter first name: ');
   const lastName = await prompt('Enter last name: ');
   
   if (!firstName || !lastName) {
     logger.error('First name and last name are required.');
-    rl.close();
-    return;
+    process.exit(1);
   }
   
-  logger.log(`\nCreating profiles for: ${firstName} ${lastName}\n`);
+  // Ask which platforms to create profiles for
+  logger.log('\nAvailable platforms:');
+  logger.log('1. LinkedIn');
+  logger.log('2. X (Twitter)');
+  logger.log('3. TikTok');
+  logger.log('4. YouTube');
+  logger.log('5. Facebook');
+  logger.log('6. Reddit');
+  logger.log('7. All platforms');
   
-  const platforms = ['linkedin', 'x', 'tiktok', 'youtube', 'facebook', 'reddit'];
+  const platformChoice = await prompt('\nEnter the number of the platform to create a profile for (or multiple numbers separated by commas): ');
+  
+  const platforms = [];
+  
+  if (platformChoice.includes('7') || platformChoice.toLowerCase() === 'all') {
+    platforms.push('linkedin', 'x', 'tiktok', 'youtube', 'facebook', 'reddit');
+  } else {
+    const choices = platformChoice.split(',').map(c => c.trim());
+    
+    if (choices.includes('1')) platforms.push('linkedin');
+    if (choices.includes('2')) platforms.push('x');
+    if (choices.includes('3')) platforms.push('tiktok');
+    if (choices.includes('4')) platforms.push('youtube');
+    if (choices.includes('5')) platforms.push('facebook');
+    if (choices.includes('6')) platforms.push('reddit');
+  }
+  
+  if (platforms.length === 0) {
+    logger.error('No valid platforms selected.');
+    process.exit(1);
+  }
+  
+  // Ask if AI-driven autonomous account creation should be used
+  const useAIResponse = await prompt('\nUse AI-driven autonomous account creation? (y/n): ');
+  const useAI = useAIResponse.toLowerCase() === 'y' || useAIResponse.toLowerCase() === 'yes';
+  
+  if (useAI) {
+    logger.log('\n🤖 AI-driven autonomous account creation enabled');
+    logger.log('The system will use AI to detect and fill forms automatically.');
+    logger.log('Note: You may still need to handle CAPTCHA and verification steps.');
+  } else {
+    logger.log('\n👤 Traditional account creation selected');
+    logger.log('The system will use predefined form filling logic with manual assistance.');
+  }
+  
+  logger.log(`\nCreating profiles for: ${platforms.join(', ')}`);
+  
+  // Load existing accounts
   const accounts = await loadAccounts();
   
-  // Display platform options
-  logger.log('Available platforms:');
-  platforms.forEach((platform, index) => {
-    logger.log(`${index + 1}. ${platform}`);
-  });
-  logger.log('0. Exit');
-  
-  while (true) {
-    const choice = await prompt('\nEnter platform number to create (0 to exit): ');
-    const platformIndex = parseInt(choice) - 1;
-    
-    if (choice === '0') {
-      break;
+  // Create profiles for each selected platform
+  for (const platform of platforms) {
+    if (!accounts[platform]) {
+      accounts[platform] = [];
     }
     
-    if (isNaN(platformIndex) || platformIndex < 0 || platformIndex >= platforms.length) {
-      logger.error('Invalid choice. Please try again.');
-      continue;
-    }
-    
-    const platform = platforms[platformIndex];
-    logger.log(`\nCreating profile for ${platform}...`);
-    
-    const account = await createProfile(platform, firstName, lastName);
+    const account = await createProfile(platform, firstName, lastName, useAI);
     
     if (account) {
-      // Initialize platform array if it doesn't exist
-      if (!accounts[platform]) {
-        accounts[platform] = [];
-      }
-      
-      // Set all existing accounts to inactive
-      for (const acc of accounts[platform]) {
-        acc.active = false;
-      }
-      
       // Add new account
       accounts[platform].push(account);
       
