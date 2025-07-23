@@ -1,8 +1,8 @@
 {
-  "name": "reddit-networking-bot",
+  "name": "@profullstack/networking-bots",
   "version": "1.0.0",
   "type": "module",
-  "description": "A Reddit bot to PM people interested in tech-founder networking groups",
+  "description": "A cli social media bot to PM people interested in what you are promoting.",
   "main": "src/networking-bot.mjs",
   "scripts": {
     "start": "node src/networking-bot.mjs",
