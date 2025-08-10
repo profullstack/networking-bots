@@ -41,26 +41,39 @@ npm install -g @profullstack/networking-bots
 ### Initial Setup
 
 ```bash
-# 1. Initialize configuration
+# 1. Run the comprehensive setup wizard (recommended)
+nbot setup
+
+# Or set up manually:
+# 2. Initialize configuration
 nbot config --init
 
-# 2. Add your social media accounts
+# 3. Add your social media accounts
 nbot accounts --add
 
-# 3. Set active accounts for platforms
+# 4. Set active accounts for platforms
 nbot accounts --set-active
 
-# 4. Configure platforms and messages
+# 5. Configure platforms and messages
 nbot config --edit
 
-# 5. Check status
+# 6. Check status
 nbot status
 
-# 6. Start the bot
+# 7. Start the bot
 nbot run
 ```
 
 ## 📋 CLI Commands
+
+### 🛠️ Setup Wizard
+```bash
+# Run comprehensive initial setup (recommended for first-time users)
+nbot setup
+
+# Force setup even if configuration exists
+nbot setup --force
+```
 
 ### 🚀 Run Bot
 ```bash
@@ -72,9 +85,6 @@ nbot run --platform linkedin
 
 # Test run without sending messages
 nbot run --dry-run
-
-# Use custom configuration
-nbot run --config ./my-config.json
 ```
 
 ### 👤 Account Management
@@ -142,8 +152,15 @@ nbot --version
 
 ## 🔧 Configuration
 
-The bot uses a `config.json` file for platform settings:
+The bot stores configuration in your user directory following XDG Base Directory specification:
 
+- **`~/.config/networking-bots/config.json`** - Platform settings and bot configuration
+- **`~/.config/networking-bots/env.json`** - Environment variables and API credentials
+- **`~/.config/networking-bots/proxies.txt`** - Proxy list for IP rotation
+
+### Configuration Structure
+
+**Platform Configuration (`config.json`):**
 ```json
 {
   "platforms": {
@@ -165,6 +182,16 @@ The bot uses a `config.json` file for platform settings:
     "maxMessagesPerDay": 10,
     "delayBetweenMessages": 300000
   }
+}
+```
+
+**Environment Variables (`env.json`):**
+```json
+{
+  "OPENAI_API_KEY": "your-openai-key",
+  "ANTHROPIC_API_KEY": "your-anthropic-key",
+  "WEBSHARE_API_KEY": "your-webshare-key",
+  "RECAPTCHA_SOLVER_API_KEY": "your-recaptcha-solver-key"
 }
 ```
 
@@ -197,6 +224,21 @@ The bot uses a `config.json` file for platform settings:
 
 ## 📊 Example Workflows
 
+### First-Time Setup
+```bash
+# Run comprehensive setup wizard (recommended)
+nbot setup
+
+# Check configuration
+nbot status
+
+# Test with dry run
+nbot run --dry-run
+
+# Start the bot
+nbot run
+```
+
 ### Daily Operations
 ```bash
 # Check bot status
@@ -226,6 +268,9 @@ nbot run --platform tiktok
 
 ### Maintenance
 ```bash
+# Reconfigure everything
+nbot setup --force
+
 # Update configuration
 nbot config --edit
 
@@ -245,15 +290,22 @@ networking-bots/
 │   ├── commands/            # Command modules
 │   │   ├── run.mjs         # Bot execution
 │   │   ├── accounts.mjs    # Account management
-│   │   ├── config.mjs      # Configuration
+│   │   ├── config.mjs      # Configuration management
+│   │   ├── setup.mjs       # Setup wizard
 │   │   ├── profiles.mjs    # Profile creation
 │   │   └── status.mjs      # Status reporting
 │   ├── platforms/          # Platform integrations
 │   ├── services/           # Core services
 │   └── utils/              # Utilities
-├── config.json             # Bot configuration
+│       └── config.mjs      # Configuration utility
 ├── accounts.json           # Encrypted account data
 └── CLI_USAGE.md           # Detailed CLI documentation
+
+# User Configuration (created by setup)
+~/.config/networking-bots/
+├── config.json             # Platform settings
+├── env.json               # Environment variables
+└── proxies.txt            # Proxy list
 ```
 
 ## 🔍 How It Works
@@ -328,8 +380,11 @@ nbot --help
 ```bash
 # Test CLI functionality
 nbot --help
-nbot config --init
+nbot setup --help
 nbot status
+
+# Run setup wizard
+nbot setup
 
 # Test with dry run
 nbot run --dry-run
