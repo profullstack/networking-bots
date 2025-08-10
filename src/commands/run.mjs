@@ -5,6 +5,7 @@ import { setTimeout as wait } from 'timers/promises';
 import dayjs from 'dayjs';
 import dotenv from 'dotenv';
 import { logger } from '../utils/logger.mjs';
+import { config } from '../utils/config.mjs';
 
 // Import platform modules
 import * as tiktok from '../platforms/tiktok.mjs';
@@ -38,31 +39,10 @@ const platforms = {
 };
 
 /**
- * Load configuration from config.json
+ * Load configuration using the new config utility
  */
-async function loadConfig(configPath = 'config.json') {
-  try {
-    const fullPath = path.resolve(configPath);
-    const data = await fs.readFile(fullPath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    logger.warn(`Could not load config from ${configPath}: ${error.message}`);
-    logger.log('Using default configuration...');
-    
-    // Return default config
-    return {
-      platforms: {
-        tiktok: { enabled: false },
-        x: { enabled: false },
-        youtube: { enabled: false },
-        facebook: { enabled: false },
-        reddit: { enabled: false },
-        linkedin: { enabled: false }
-      },
-      searchTerms: {},
-      settings: { respectWorkingHours: false }
-    };
-  }
+async function loadConfig() {
+  return config.load();
 }
 
 /**
@@ -212,7 +192,7 @@ async function cleanup() {
  * Main run function for the networking bot
  */
 export async function runNetworkingBot(options = {}) {
-  const { platform: targetPlatform, dryRun = false, config: configPath = './config.json' } = options;
+  const { platform: targetPlatform, dryRun = false } = options;
   
   logger.log(`\n🤖 Starting networking bot at ${dayjs().format('YYYY-MM-DD HH:mm')}`);
   
@@ -222,15 +202,15 @@ export async function runNetworkingBot(options = {}) {
   
   try {
     // Load configuration
-    const config = await loadConfig(configPath);
+    const botConfig = await loadConfig();
     
     // Migrate existing messaged.json to platform-specific files
     await migrateMessagedUsers();
     
     // Determine which platforms to run
-    const platformsToRun = targetPlatform 
-      ? [targetPlatform] 
-      : Object.keys(platforms).filter(name => config.platforms[name]?.enabled);
+    const platformsToRun = targetPlatform
+      ? [targetPlatform]
+      : Object.keys(platforms).filter(name => botConfig.platforms[name]?.enabled);
     
     if (platformsToRun.length === 0) {
       logger.warn('⚠️ No platforms enabled or specified. Please configure platforms first.');
@@ -239,12 +219,12 @@ export async function runNetworkingBot(options = {}) {
     }
     
     // Initialize services and platforms
-    await initialize(config, platformsToRun);
+    await initialize(botConfig, platformsToRun);
     
     // Run each platform sequentially
     for (const platformName of platformsToRun) {
-      if (config.platforms[platformName]?.enabled) {
-        await runPlatform(platformName, config, dryRun);
+      if (botConfig.platforms[platformName]?.enabled) {
+        await runPlatform(platformName, botConfig, dryRun);
         
         // Add a delay between platforms to avoid detection (skip in dry run)
         if (!dryRun && platformsToRun.indexOf(platformName) < platformsToRun.length - 1) {

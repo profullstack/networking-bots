@@ -7,43 +7,40 @@ import { humanBehavior } from '../services/human-behavior.mjs';
 import { rateLimiter } from '../services/rate-limiter.mjs';
 import { proxyManager } from '../services/proxy-manager.mjs';
 
-export default class X {
-  constructor() {
-    this.browser = null;
-    this.page = null;
-    this.loginSuccessful = false;
+let browser;
+let page;
+let loginSuccessful = false;
+
+/**
+ * Check if we need to log in to X.com
+ * @returns {Promise<boolean>} True if login is needed
+ */
+async function needsLogin() {
+  if (!page) {
+    throw new Error('X.com browser not initialized');
   }
 
-  /**
-   * Check if we need to log in to X.com
-   * @returns {Promise<boolean>} True if login is needed
-   */
-  async needsLogin() {
-    if (!this.page) {
-      throw new Error('X.com browser not initialized');
+  try {
+    // Check if we're on the login page or home page
+    const currentUrl = page.url();
+    if (currentUrl.includes('login') || currentUrl.includes('i/flow/login')) {
+      return true;
     }
 
-    try {
-      // Check if we're on the login page or home page
-      const currentUrl = this.page.url();
-      if (currentUrl.includes('login') || currentUrl.includes('i/flow/login')) {
-        return true;
-      }
-
-      // Check for login button
-      const loginButton = await this.page.$('[data-testid="loginButton"]');
-      return !!loginButton;
-    } catch (error) {
-      logger.error(`Error checking login status: ${error.message}`);
-      return true; // Assume login needed on error
-    }
+    // Check for login button
+    const loginButton = await page.$('[data-testid="loginButton"]');
+    return !!loginButton;
+  } catch (error) {
+    logger.error(`Error checking login status: ${error.message}`);
+    return true; // Assume login needed on error
   }
+}
 
-  /**
-   * Login to X.com
-   * @returns {Promise<boolean>} Success status
-   */
-  async login() {
+/**
+ * Login to X.com
+ * @returns {Promise<boolean>} Success status
+ */
+async function login() {
     try {
       const username = process.env.X_USERNAME;
       const password = process.env.X_PASSWORD;
@@ -890,7 +887,7 @@ export default class X {
               logger.log('A screenshot has been saved to screenshots/login-verification-debug.png');
               
               // Set up verification code handling
-              const verificationCode = await this.handleVerificationCode();
+              const verificationCode = await handleVerificationCode();
               
               // Enter the verification code
               await verificationInput.type(verificationCode);
@@ -921,7 +918,7 @@ export default class X {
 
         // Wait for home page to load
         try {
-          await this.page.waitForFunction(() => document.querySelector('span')?.textContent === 'Everyone', { timeout: 30000 });
+          await page.waitForFunction(() => document.querySelector('span')?.textContent === 'Everyone', { timeout: 30000 });
 
           logger.log('Successfully logged in to X.com');
           loginSuccessful = true;
@@ -952,15 +949,15 @@ export default class X {
     }
   } catch (error) {
     logger.error(`Failed to log in to X.com: ${error.message}`);
-    this.loginSuccessful = false;
+    loginSuccessful = false;
     return false;
   }
-  }
+}
 
-  /**
-   * Initialize X platform
-   */
-  async initialize() {
+/**
+ * Initialize X platform
+ */
+export async function initialize() {
     try {
       // Apply stealth plugin to avoid detection
       puppeteer.use(StealthPlugin());
@@ -1068,13 +1065,13 @@ export default class X {
  * @param {Array<string>} searchTerms - List of search terms to find users
  * @returns {Promise<Array<string>>} - List of usernames
  */
-  async findPotentialUsers(searchTerms) {
-    if (!this.page) {
-      throw new Error('X.com browser not initialized');
-    }
+export async function findPotentialUsers(searchTerms) {
+  if (!page) {
+    throw new Error('X.com browser not initialized');
+  }
 
-    // Check if login was successful before proceeding
-    if (!this.loginSuccessful) {
+  // Check if login was successful before proceeding
+  if (!loginSuccessful) {
     logger.warn('Cannot search for users: Login to X.com was not successful');
     return [];
   }
@@ -1179,12 +1176,12 @@ export default class X {
  * @param {string} message - Message to send
  * @returns {Promise<boolean>} - Success status
  */
-  async messageUser(username, message) {
-    logger.log(`[${dayjs().format('HH:mm')}] Attempting to message X.com user: ${username}`);
+export async function messageUser(username, message) {
+  logger.log(`[${dayjs().format('HH:mm')}] Attempting to message X.com user: ${username}`);
 
-    // Check if login was successful before proceeding
-    if (!this.loginSuccessful) {
-      logger.warn('Cannot message users: Login to X.com was not successful');
+  // Check if login was successful before proceeding
+  if (!loginSuccessful) {
+    logger.warn('Cannot message users: Login to X.com was not successful');
     return false;
   }
 
@@ -1196,55 +1193,8 @@ export default class X {
       return false;
     }
 
-    // Try using the Twitter API first if available
-    if (twitterClient) {
-      try {
-        logger.log(`Attempting to message ${username} using Twitter API`);
-
-        // Step 1: Find the user's ID from their username
-        const userLookup = await twitterClient.v2.userByUsername(username);
-        if (!userLookup.data) {
-          logger.warn(`Could not find user ${username} via Twitter API`);
-        } else {
-          const userId = userLookup.data.id;
-          logger.log(`Found user ${username} with ID: ${userId}`);
-
-          // Step 2: Check if we can send a direct message to this user
-          // This requires checking if they follow us or have DMs open
-          const relationship = await twitterClient.v2.friendship(
-            await twitterClient.v2.me().then(me => me.data.id),
-            userId
-          );
-
-          if (relationship.data.following) {
-            logger.log(`User ${username} is following us, can send DM`);
-
-            // Step 3: Send the direct message
-            const dmResponse = await twitterClient.v1.sendDm({
-              recipient_id: userId,
-              text: message
-            });
-
-            if (dmResponse && dmResponse.event) {
-              logger.log(`Successfully sent DM to ${username} via Twitter API`);
-
-              // Increment message count
-              await rateLimiter.incrementActionCount('x_message');
-
-              return true;
-            }
-          } else {
-            logger.log(`User ${username} is not following us, cannot send DM via API`);
-            // Try following them first
-            await twitterClient.v2.follow(await twitterClient.v2.me().then(me => me.data.id), userId);
-            logger.log(`Followed user ${username}, they may follow back later`);
-          }
-        }
-      } catch (apiError) {
-        logger.error(`Error using Twitter API to message ${username}: ${apiError.message}`);
-        logger.log('Falling back to browser-based approach');
-      }
-    }
+    // Note: Twitter API functionality would require proper API client setup
+    // For now, we'll use the browser-based approach
 
     // Fall back to browser-based approach if API fails or isn't available
     if (!browser || !page) {
@@ -1338,23 +1288,23 @@ export default class X {
   }
 }
 
-  /**
-   * Close the X.com browser instance
-   */
-  async cleanup() {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      this.page = null;
-      logger.log('X.com browser closed');
-    }
+/**
+ * Close the X.com browser instance
+ */
+export async function cleanup() {
+  if (browser) {
+    await browser.close();
+    browser = null;
+    page = null;
+    logger.log('X.com browser closed');
   }
+}
 
-  /**
-   * Handle verification code input through a local web server
-   * @returns {Promise<string>} The verification code entered by the user
-   */
-  async handleVerificationCode() {
+/**
+ * Handle verification code input through a local web server
+ * @returns {Promise<string>} The verification code entered by the user
+ */
+async function handleVerificationCode() {
     // Create a simple HTTP server to receive the verification code
     const http = await import('http');
     const url = await import('url');
@@ -1433,5 +1383,4 @@ export default class X {
       reject(new Error('Verification code input timed out after 5 minutes'));
     }, 5 * 60 * 1000);
   });
-  }
 }

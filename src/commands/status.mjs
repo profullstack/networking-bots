@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import dayjs from 'dayjs';
 import { logger } from '../utils/logger.mjs';
 import { loadMessagedUsers } from '../utils.mjs';
+import { config } from '../utils/config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,16 +13,10 @@ const __dirname = path.dirname(__filename);
 const PLATFORMS = ['tiktok', 'x', 'youtube', 'facebook', 'reddit', 'linkedin'];
 
 /**
- * Load configuration from file
+ * Load configuration using the new config utility
  */
-async function loadConfig(configPath = './config.json') {
-  try {
-    const fullPath = path.resolve(configPath);
-    const data = await fs.readFile(fullPath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    return null;
-  }
+async function loadConfig() {
+  return config.load();
 }
 
 /**
@@ -69,27 +64,23 @@ async function getPlatformStats(platform) {
 async function showOverallStatus() {
   logger.log('\n📊 NETWORKING BOT STATUS');
   logger.log('='.repeat(40));
+  logger.log(`📁 Config location: ${config.getConfigPath()}`);
   
   // Load configuration
-  const config = await loadConfig();
-  if (!config) {
-    logger.log('❌ No configuration found');
-    logger.log('💡 Use: nbot config --init');
-    return;
-  }
+  const botConfig = await loadConfig();
   
   // Load accounts
   const accounts = await loadAccounts();
   
   // Show configuration status
   logger.log('\n⚙️  CONFIGURATION:');
-  const enabledPlatforms = Object.entries(config.platforms)
+  const enabledPlatforms = Object.entries(botConfig.platforms)
     .filter(([_, settings]) => settings.enabled)
     .map(([platform, _]) => platform);
   
   logger.log(`  Enabled platforms: ${enabledPlatforms.length > 0 ? enabledPlatforms.join(', ') : 'None'}`);
-  logger.log(`  Working hours: ${config.settings?.respectWorkingHours ? 'Enabled' : 'Disabled'}`);
-  logger.log(`  Max messages/day: ${config.settings?.maxMessagesPerDay || 'Not set'}`);
+  logger.log(`  Working hours: ${botConfig.settings?.respectWorkingHours ? 'Enabled' : 'Disabled'}`);
+  logger.log(`  Max messages/day: ${botConfig.settings?.maxMessagesPerDay || 'Not set'}`);
   
   // Show account status
   logger.log('\n👤 ACCOUNTS:');
@@ -169,8 +160,8 @@ async function showPlatformStatus(platform, detailed = false) {
   logger.log('='.repeat(30));
   
   // Load configuration
-  const config = await loadConfig();
-  const platformConfig = config?.platforms?.[platform];
+  const botConfig = await loadConfig();
+  const platformConfig = botConfig?.platforms?.[platform];
   
   if (!platformConfig) {
     logger.log('❌ Platform not found in configuration');
@@ -182,7 +173,7 @@ async function showPlatformStatus(platform, detailed = false) {
   logger.log(`  Status: ${platformConfig.enabled ? '🟢 Enabled' : '🔴 Disabled'}`);
   logger.log(`  Message: "${platformConfig.message || 'Not set'}"`);
   
-  const searchTerms = config.searchTerms?.[platform] || [];
+  const searchTerms = botConfig.searchTerms?.[platform] || [];
   logger.log(`  Search terms: ${searchTerms.length > 0 ? searchTerms.join(', ') : 'None'}`);
   
   // Show account information

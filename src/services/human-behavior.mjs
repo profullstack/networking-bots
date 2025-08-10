@@ -430,7 +430,8 @@ class HumanBehaviorSimulator {
         const randomStartX = box.x + box.width / 2 + (Math.random() * 100 - 50);
         const randomStartY = box.y + box.height / 2 + (Math.random() * 100 - 50);
         
-        await recaptchaFrame.mouse.move(randomStartX, randomStartY);
+        // Use the main page mouse instead of frame mouse (frames don't have mouse property)
+        await page.mouse.move(randomStartX, randomStartY);
         
         // Then move to the checkbox with human-like movement (curved path with variable speed)
         const steps = 10 + Math.floor(Math.random() * 15); // Variable number of steps
@@ -446,7 +447,7 @@ class HumanBehaviorSimulator {
           const currentY = randomStartY + (box.y + box.height/2 - randomStartY) * progress + curve;
           
           // Move to the position
-          await recaptchaFrame.mouse.move(currentX, currentY);
+          await page.mouse.move(currentX, currentY);
           
           // Variable delay between movements (slower at beginning and end)
           const movementDelay = 10 + Math.sin(progress * Math.PI) * 40 + Math.random() * 30;
@@ -457,7 +458,7 @@ class HumanBehaviorSimulator {
         await new Promise(r => setTimeout(r, 300 + Math.random() * 700));
         
         // Add slight jitter to click position (humans aren't perfect)
-        await recaptchaFrame.mouse.click(
+        await page.mouse.click(
           box.x + box.width / 2 + (Math.random() * 6 - 3),
           box.y + box.height / 2 + (Math.random() * 6 - 3)
         );
@@ -661,7 +662,8 @@ class HumanBehaviorSimulator {
         const randomStartX = box.x + box.width / 2 + (Math.random() * 100 - 50);
         const randomStartY = box.y + box.height / 2 + (Math.random() * 100 - 50);
         
-        await hcaptchaFrame.mouse.move(randomStartX, randomStartY);
+        // Use the main page mouse instead of frame mouse (frames don't have mouse property)
+        await page.mouse.move(randomStartX, randomStartY);
         
         // Then move to the checkbox with human-like movement (curved path with variable speed)
         const steps = 10 + Math.floor(Math.random() * 15); // Variable number of steps
@@ -677,7 +679,7 @@ class HumanBehaviorSimulator {
           const currentY = randomStartY + (box.y + box.height/2 - randomStartY) * progress + curve;
           
           // Move to the position
-          await hcaptchaFrame.mouse.move(currentX, currentY);
+          await page.mouse.move(currentX, currentY);
           
           // Variable delay between movements (slower at beginning and end)
           const movementDelay = 10 + Math.sin(progress * Math.PI) * 40 + Math.random() * 30;
@@ -688,7 +690,7 @@ class HumanBehaviorSimulator {
         await new Promise(r => setTimeout(r, 300 + Math.random() * 700));
         
         // Add slight jitter to click position (humans aren't perfect)
-        await hcaptchaFrame.mouse.click(
+        await page.mouse.click(
           box.x + box.width / 2 + (Math.random() * 6 - 3),
           box.y + box.height / 2 + (Math.random() * 6 - 3)
         );

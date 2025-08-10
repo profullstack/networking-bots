@@ -1,47 +1,67 @@
-export async function makeProfullstackAiCall(prompt, system_prompt) {
-    try {
-        const response = await fetch('https://ai.profullstack.com/ollamaapi/api/chat', {
-            method: 'POST',
-            body: JSON.stringify({
-                model: 'llama3.1:8b',
-                messages: [
-                    {
-                        role: 'system',
-                        content: system_prompt
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
+export async function makeProfullstackAiCall(prompt, system_prompt, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const response = await fetch('https://ai.profullstack.com/ollamaapi/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama3.1:8b',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: system_prompt
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    stream: false,
+                    options: {
+                        temperature: 0.6,
+                        top_p: 0.9,
+                        stop: null
                     }
-                ],
-                stream: false,
-                options: {
-                    temperature: 0.6,
-                    top_p: 0.9,
-                    stop: null
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                
+                // For 5xx errors (server issues), retry
+                if (response.status >= 500 && attempt < retries) {
+                    console.warn(`AI API server error (attempt ${attempt}/${retries}): ${response.status} ${response.statusText}. Retrying in ${attempt * 1000}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                    continue;
                 }
-            })
-        });
+                
+                console.error('AI API error:', errorData);
+                throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+            }
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            console.error('AI API error:', errorData);
-            throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+            const data = await response.json();
+            if (!data?.message?.content) {
+                console.error('Invalid AI response format:', data);
+                throw new Error('Invalid AI response format');
+            }
+
+            // Directly return the content as an object
+            return data.message.content;
+        } catch (error) {
+            // For network errors, retry
+            if ((error.code === 'ECONNRESET' || error.code === 'ENOTFOUND' || error.message.includes('fetch')) && attempt < retries) {
+                console.warn(`Network error (attempt ${attempt}/${retries}): ${error.message}. Retrying in ${attempt * 1000}ms...`);
+                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                continue;
+            }
+            
+            console.error('AI call failed:', error);
+            return {
+                summary: `AI service error: ${error.message}. Please review the events manually.`
+            };
         }
-
-        const data = await response.json();
-        if (!data?.message?.content) {
-            console.error('Invalid AI response format:', data);
-            throw new Error('Invalid AI response format');
-        }
-
-        // Directly return the content as an object
-        return data.message.content;
-    } catch (error) {
-        console.error('AI call failed:', error);
-        return {
-            summary: `AI service error: ${error.message}. Please review the events manually.`
-        };
     }
 }
 

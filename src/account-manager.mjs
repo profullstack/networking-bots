@@ -22,15 +22,68 @@ const ACCOUNTS_FILE_PATH = path.join(__dirname, '../accounts.json');
 // Create readline interface for CLI interaction
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
+  terminal: true
 });
 
 // Helper function to prompt for input
 function prompt(question) {
   return new Promise((resolve) => {
+    // Disable echo temporarily for clean input
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+    
     rl.question(question, (answer) => {
       resolve(answer.trim());
     });
+  });
+}
+
+// Helper function to prompt for password input (hidden)
+function promptPassword(question) {
+  return new Promise((resolve) => {
+    process.stdout.write(question);
+    
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+    
+    let password = '';
+    
+    const onData = (char) => {
+      const charStr = char.toString();
+      
+      if (charStr === '\n' || charStr === '\r' || charStr === '\u0004') {
+        // Enter or Ctrl+D
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        resolve(password.trim());
+      } else if (charStr === '\u0003') {
+        // Ctrl+C
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        process.exit(1);
+      } else if (charStr === '\u007f' || charStr === '\b') {
+        // Backspace
+        if (password.length > 0) {
+          password = password.slice(0, -1);
+          process.stdout.write('\b \b');
+        }
+      } else if (charStr >= ' ' && charStr <= '~') {
+        // Printable characters
+        password += charStr;
+        process.stdout.write('*');
+      }
+    };
+    
+    process.stdin.on('data', onData);
   });
 }
 
@@ -123,7 +176,7 @@ async function addAccount() {
   }
   
   const username = await prompt('Enter username: ');
-  const password = await prompt('Enter password: ');
+  const password = await promptPassword('Enter password: ');
   
   // Additional platform-specific credentials
   const additionalCredentials = {};
@@ -206,7 +259,7 @@ async function updateAccount() {
   // Update fields
   const updatePassword = (await prompt('Update password? (y/n): ')).toLowerCase() === 'y';
   if (updatePassword) {
-    const password = await prompt('Enter new password: ');
+    const password = await promptPassword('Enter new password: ');
     account.password = encrypt(password);
   }
   

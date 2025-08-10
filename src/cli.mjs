@@ -11,6 +11,7 @@ import { runNetworkingBot } from './commands/run.mjs';
 import { manageAccounts } from './commands/accounts.mjs';
 import { createProfiles } from './commands/profiles.mjs';
 import { configureBot } from './commands/config.mjs';
+import { runSetup } from './commands/setup.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,7 +46,7 @@ async function setupCLI() {
     .description('🚀 Start the networking bot to find and message potential users')
     .option('-p, --platform <platform>', 'run only specific platform (tiktok, x, youtube, facebook, reddit, linkedin)')
     .option('-d, --dry-run', 'run in dry-run mode (no actual messages sent)')
-    .option('-c, --config <path>', 'path to config file', './config.json')
+    .option('-c, --config <path>', 'path to config file (deprecated - config now stored in ~/.config/networking-bots/)')
     .action(async (options) => {
       try {
         await runNetworkingBot(options);
@@ -107,6 +108,20 @@ async function setupCLI() {
       }
     });
 
+  // Setup command - comprehensive initial configuration
+  program
+    .command('setup')
+    .description('🛠️  Run comprehensive initial setup wizard')
+    .option('-f, --force', 'force setup even if configuration already exists')
+    .action(async (options) => {
+      try {
+        await runSetup(options);
+      } catch (error) {
+        logger.error(`Failed to run setup: ${error.message}`);
+        process.exit(1);
+      }
+    });
+
   // Status command - show bot status and statistics
   program
     .command('status')
@@ -127,6 +142,7 @@ async function setupCLI() {
   program.on('--help', () => {
     console.log('');
     console.log('Examples:');
+    console.log('  $ nbot setup                  # Run initial setup wizard');
     console.log('  $ nbot run                    # Start the networking bot');
     console.log('  $ nbot run -p linkedin        # Run only LinkedIn bot');
     console.log('  $ nbot accounts --list        # List all accounts');

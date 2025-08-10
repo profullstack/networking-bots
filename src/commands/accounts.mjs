@@ -24,7 +24,8 @@ const SUPPORTED_PLATFORMS = ['linkedin', 'x', 'tiktok', 'youtube', 'facebook', '
 function createReadlineInterface() {
   return readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
+    terminal: true
   });
 }
 
@@ -33,9 +34,63 @@ function createReadlineInterface() {
  */
 function prompt(rl, question) {
   return new Promise((resolve) => {
+    // Disable echo temporarily for clean input
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+    
     rl.question(question, (answer) => {
       resolve(answer.trim());
     });
+  });
+}
+
+/**
+ * Helper function to prompt for password input (hidden)
+ */
+function promptPassword(rl, question) {
+  return new Promise((resolve) => {
+    process.stdout.write(question);
+    
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+    
+    let password = '';
+    
+    const onData = (char) => {
+      const charStr = char.toString();
+      
+      if (charStr === '\n' || charStr === '\r' || charStr === '\u0004') {
+        // Enter or Ctrl+D
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        resolve(password.trim());
+      } else if (charStr === '\u0003') {
+        // Ctrl+C
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        process.exit(1);
+      } else if (charStr === '\u007f' || charStr === '\b') {
+        // Backspace
+        if (password.length > 0) {
+          password = password.slice(0, -1);
+          process.stdout.write('\b \b');
+        }
+      } else if (charStr >= ' ' && charStr <= '~') {
+        // Printable characters
+        password += charStr;
+        process.stdout.write('*');
+      }
+    };
+    
+    process.stdin.on('data', onData);
   });
 }
 
@@ -149,7 +204,7 @@ async function addAccountInteractive() {
     }
     
     const username = await prompt(rl, 'Enter username: ');
-    const password = await prompt(rl, 'Enter password: ');
+    const password = await promptPassword(rl, 'Enter password: ');
     
     // Additional platform-specific credentials
     const additionalCredentials = {};
