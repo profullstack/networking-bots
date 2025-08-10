@@ -1,5 +1,17 @@
 # 🤖 nbot - Social Media Networking Bot
 
+[![npm version](https://img.shields.io/npm/v/@profullstack/networking-bots?style=flat-square&color=blue)](https://www.npmjs.com/package/@profullstack/networking-bots)
+[![license](https://img.shields.io/npm/l/@profullstack/networking-bots?style=flat-square&color=green)](https://github.com/profullstack/networking-bots/blob/main/LICENSE)
+[![node version](https://img.shields.io/node/v/@profullstack/networking-bots?style=flat-square&color=brightgreen)](https://nodejs.org/)
+[![package manager](https://img.shields.io/badge/package%20manager-pnpm-orange?style=flat-square)](https://pnpm.io/)
+[![downloads](https://img.shields.io/npm/dm/@profullstack/networking-bots?style=flat-square&color=blue)](https://www.npmjs.com/package/@profullstack/networking-bots)
+[![code size](https://img.shields.io/github/languages/code-size/profullstack/networking-bots?style=flat-square&color=lightblue)](https://github.com/profullstack/networking-bots)
+[![last commit](https://img.shields.io/github/last-commit/profullstack/networking-bots?style=flat-square&color=yellow)](https://github.com/profullstack/networking-bots/commits)
+[![issues](https://img.shields.io/github/issues/profullstack/networking-bots?style=flat-square&color=red)](https://github.com/profullstack/networking-bots/issues)
+[![pull requests](https://img.shields.io/github/issues-pr/profullstack/networking-bots?style=flat-square&color=purple)](https://github.com/profullstack/networking-bots/pulls)
+[![maintenance](https://img.shields.io/maintenance/yes/2025?style=flat-square&color=brightgreen)](https://github.com/profullstack/networking-bots)
+[![platform support](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey?style=flat-square)](https://github.com/profullstack/networking-bots)
+
 A sophisticated CLI tool that automates social media outreach and account management across multiple platforms including TikTok, X (Twitter), YouTube, Facebook, Reddit, and LinkedIn.
 
 ## ✨ Features
