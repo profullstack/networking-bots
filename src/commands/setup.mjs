@@ -147,11 +147,16 @@ function prompt(rl, question) {
  */
 function promptPassword(rl, question) {
   return new Promise((resolve) => {
+    // For non-TTY environments (like piped input), fall back to regular prompt
+    if (!process.stdin.isTTY) {
+      return prompt(rl, question).then(resolve);
+    }
+    
     process.stdout.write(question);
     
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
+    // Set raw mode to disable echo
+    const wasRaw = process.stdin.isRaw || false;
+    process.stdin.setRawMode(true);
     
     let password = '';
     
@@ -160,17 +165,13 @@ function promptPassword(rl, question) {
       
       if (charStr === '\n' || charStr === '\r' || charStr === '\u0004') {
         // Enter or Ctrl+D
-        if (process.stdin.isTTY) {
-          process.stdin.setRawMode(false);
-        }
+        process.stdin.setRawMode(wasRaw);
         process.stdin.removeListener('data', onData);
         process.stdout.write('\n');
         resolve(password.trim());
       } else if (charStr === '\u0003') {
         // Ctrl+C
-        if (process.stdin.isTTY) {
-          process.stdin.setRawMode(false);
-        }
+        process.stdin.setRawMode(wasRaw);
         process.stdin.removeListener('data', onData);
         process.stdout.write('\n');
         process.exit(1);
@@ -215,12 +216,11 @@ async function setupEnvironmentVariables(rl) {
   }
   
   for (const [key, envConfig] of Object.entries(ENV_VARIABLES)) {
-    const isRequired = envConfig.required ? ' (required)' : ' (optional)';
     const defaultValue = typeof envConfig.default === 'function' ? envConfig.default() : envConfig.default;
     const currentValue = currentEnv[key] || defaultValue;
     const defaultText = currentValue ? ` [${currentValue}]` : '';
     
-    logger.log(`\n📝 ${envConfig.description}${isRequired}${defaultText}`);
+    logger.log(`\n📝 ${envConfig.description}${defaultText}`);
     
     let value;
     if (envConfig.sensitive) {
